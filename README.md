@@ -8,3 +8,4 @@ For this toy example project you will need a couple things.
 2. bar
 3. baz
 4. foz
+5. boo
