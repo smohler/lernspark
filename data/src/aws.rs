@@ -6,9 +6,26 @@ use aws_config::SdkConfig;
 use aws_config::profile::ProfileFileCredentialsProvider;
 use std::error::Error;
 use std::env;
+use colored::*;
+
+/// Checks for the AWS_PROFILE environment variable and guides the user if not set.
+pub fn check_aws_profile() -> Result<String, String> {
+    match env::var("AWS_PROFILE") {
+        Ok(profile) => {
+            println!("{} {}", "Using AWS profile:".green(), profile);
+            Ok(profile)
+        },
+        Err(_) => {
+            let error_message = "The AWS_PROFILE environment variable is not set.";
+            println!("{}", error_message.red());
+            println!("Please run {} to set up your AWS profile:", "aws configure --profile <profile-name>".yellow());
+            println!("After setting up, you can run this application with {}.", "AWS_PROFILE=<profile-name>".yellow());
+            Err("Missing AWS_PROFILE environment variable.".to_string())
+        }
+    }
+}
 
 // Function to create an AWS SDK configuration
-// Adjust the function signature to accept `String` if you want flexibility
 async fn create_aws_config() -> Result<SdkConfig, Box<dyn Error>> {
     // Retrieve the AWS profile name from environment variables or default to "default"
     let profile_name = env::var("AWS_PROFILE").unwrap_or_else(|_| "default".to_string());

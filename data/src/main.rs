@@ -2,6 +2,7 @@ mod aws;
 
 #[tokio::main] // This attribute effectively makes your main function asynchronous
 async fn main() {
+    let _ = aws::check_aws_profile();
     if let Err(e) = aws::check_permissions().await {
         eprintln!("You do not have the right permissions: {}", e);
     }
