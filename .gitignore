@@ -1,3 +1,6 @@
+# OS-specific files
+.DS_Store
+Thumbs.db
 *.class
 *.log
 
@@ -8,4 +11,28 @@ hs_err_pid*
 .env
 .env.prod
 .env.test
+
+# Edit to your liking
+
+# Compiled files
+**/target/
+
+# Dependency directories
+/node_modules/
+/vendor/
+
+# Rust toolchain
+/.rustup/
+/.cargo/
+
+# Build artifacts
+*.o
+*.so
+*.rlib
+*.dll
+*.exe
+
+# Generated documentation
+/doc/
+
 
