@@ -6,13 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arrow = "6.0.0"
 aws-config = "1.2.0"
 aws-sdk-s3 = "1.23.0"
 aws-types = "1.2.0"
 bytes = "1.6.0"
 colored = "2.1.0"
+rand = "0.8.5"
 tokio = { version = "1.27.0", features = ["full"] }
-uuid = "1.8.0"
+uuid = { version = "1.8.0", features = ["v4"] }
+parquet = { version = "6.0.0", features = ["arrow"] }  # Check the version and feature compatibility.
 
 [dev-dependencies]
 tempdir = "0.3.7"

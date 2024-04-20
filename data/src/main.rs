@@ -1,4 +1,5 @@
 mod aws;
+mod model;
 
 #[tokio::main] // This attribute effectively makes your main function asynchronous
 async fn main() {
@@ -8,6 +9,9 @@ async fn main() {
     }
     if let Err(e) = aws::check_aws_config().await {
         eprintln!("Failed to check AWS config: {}", e);
+    }
+    if let Err(e) = aws::check_s3_deep_glacier().await {
+        eprintln!("Failed to upload test data to bucker: {}", e);
     }
 }
 
