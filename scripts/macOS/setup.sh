@@ -4,7 +4,7 @@
 set -e
 
 # Trap specifically for Ctrl+C interruption
-trap 'echo "Caught SIGINT, running cleanup..."; cleanup_on_exit; exit 130; cd $PWD' INT
+trap 'echo "Caught SIGINT, running cleanup..."; rm temp.txt; cleanup_on_exit; exit 130; cd $PWD' INT
 
 SQL_FILE="$ROOT_DIR/data/data.sql"
 
