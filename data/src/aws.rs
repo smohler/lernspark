@@ -299,3 +299,16 @@ pub async fn delete_objects_and_bucket(
         Err(err) => Err(format!("Error deleting bucket '{}': {}", bucket_name, err)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_s3_upload() {
+        if let Err(e) = check_s3_deep_glacier().await {
+            eprintln!("Failed to upload test data to bucker: {}", e);
+        }
+    }
+}
+

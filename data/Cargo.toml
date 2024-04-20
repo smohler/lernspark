@@ -13,7 +13,7 @@ aws-types = "1.2.0"
 bytes = "1.6.0"
 colored = "2.1.0"
 rand = "0.8.5"
-tokio = { version = "1.27.0", features = ["full"] }
+tokio = { version = "1.27.0", features = ["full", "test-util"]}
 uuid = { version = "1.8.0", features = ["v4"] }
 parquet = { version = "6.0.0", features = ["arrow"] }  # Check the version and feature compatibility.
 

@@ -1,0 +1,5 @@
+-- SQL Database Schema
+CREATE TABLE Employee (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    Name TEXT NOT NULL
+);
