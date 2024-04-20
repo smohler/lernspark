@@ -1,4 +1,9 @@
 #!/bin/bash
+PWD=$(pwd)
+SCRIPT_PATH=$(readlink -f "$0")
+ROOT_DIR="$(dirname $(dirname $(dirname "$SCRIPT_PATH")))"
+SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+cd $SCRIPT_DIR
 
 # Setup and cleanup configurations
 source setup.sh
@@ -42,6 +47,7 @@ while true; do
     # Remove the last comma and close the table definition
     sed -i '' -e '$ s/,$//' temp.txt
     echo ");" >> temp.txt
+    echo "" >> temp.txt
     cat temp.txt >> "$SQL_FILE"
     rm temp.txt
 done
@@ -49,3 +55,4 @@ done
 printf "\e[36mGenerated SQL schema:\e[0m 🗃️\n"
 cat "$SQL_FILE"
 rm "$SQL_FILE.bak"
+cd $PWD 

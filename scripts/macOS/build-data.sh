@@ -1,5 +1,5 @@
 #!/bin/bash
-PWD = $(pwd)
+PWD=$(pwd)
 echo "Present working directory is $PWD"
 
 SCRIPT_PATH=$(readlink -f "$0")
