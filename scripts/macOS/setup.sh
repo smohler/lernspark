@@ -6,13 +6,6 @@ set -e
 # Trap specifically for Ctrl+C interruption
 trap 'echo "Caught SIGINT, running cleanup..."; cleanup_on_exit; exit 130' INT
 
-# Determine OS type and adjust the sed in-place edit command accordingly
-if [[ "$(uname)" == "Darwin" ]]; then
-    SED_CMD="sed -i ''"
-else
-    SED_CMD="sed -i''"
-fi
-
 # Define the SQL file path relative to the script location
 SCRIPT_DIR=$(dirname "$0")
 BASE_DIR=$(realpath "$SCRIPT_DIR/../..")

@@ -4,20 +4,22 @@
 source setup.sh
 
 types=("INT" "VARCHAR(255)" "TEXT" "DATE" "FLOAT" "BOOLEAN")
-echo "Select the data type for the column:"
+printf "\e[36mSelect the data type for the column:\e[0m 📊\n"
 for i in "${!types[@]}"; do
-    echo "$((i + 1))) ${types[i]}"
+    printf "\e[32m$((i + 1))) ${types[i]}\e[0m\n"
 done
 
 select_column_type() {
-    read -p "Enter your choice: " choice
+    read -p ": " choice
     if [[ "$choice" =~ ^[1-6]$ ]]; then
-        echo "${types[$choice-1]}"
+        printf "${types[$choice-1]}\n"
     else
-        echo "Invalid selection. Try again."
+        printf "\e[31mInvalid selection. Try again.\e[0m ❌\n"
         select_column_type
     fi
 }
 
+printf "\e[34mEnter your choice: \e[0m🔢 "
 column_type=$(select_column_type)
-echo "Selected data type: $column_type"
+printf "\e[35mSelected data type: $column_type\e[0m ✔️\n"
+

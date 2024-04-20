@@ -2,30 +2,31 @@
 
 # Setup and cleanup configurations
 source setup.sh
-echo "Writing to $SQL_FILE"
+printf "\e[32mWriting to ${SQL_FILE}\e[0m 📝\n"
+
 # Loop for adding tables
 while true; do
-    echo "Do you want to add a new table? (yes/no):"
+    printf "\e[36mDo you want to add a new table? (yes/no):\e[0m 🤔\n"
     read answer
     if [[ "$answer" != "yes" ]]; then
-        echo "Finished creating SQL schema."
+        printf "\e[33mFinished creating SQL schema.\e[0m ✅\n"
         break
     fi
 
-    echo "Enter table name:"
+    printf "\e[35mEnter table name:\e[0m 📛\n"
     read table_name
     if [[ -z "$table_name" ]]; then
-        echo "Table name cannot be empty."
+        printf "\e[31mTable name cannot be empty.\e[0m ❌\n"
         continue
     fi
 
-    echo "Creating table $table_name"
+    printf "\e[32mCreating table ${table_name}\e[0m 🛠️\n"
     echo "CREATE TABLE $table_name (" > temp.txt
     echo "    ID INT AUTO_INCREMENT PRIMARY KEY," >> temp.txt
 
     # Loop for adding columns to the current table
     while true; do
-        echo "Enter column name (or leave empty to finish this table):"
+        printf "\e[34mEnter column name (or leave empty to finish this table):\e[0m 📝\n"
         read column_name
         if [[ -z "$column_name" ]]; then
             echo "Finishing column definitions for $table_name."
@@ -45,6 +46,6 @@ while true; do
     rm temp.txt
 done
 
-echo "Generated SQL schema:"
+printf "\e[36mGenerated SQL schema:\e[0m 🗃️\n"
 cat "$SQL_FILE"
 rm "$SQL_FILE.bak"

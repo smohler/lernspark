@@ -2,11 +2,11 @@
 
 # Define the constraints available
 constraints=("NOT NULL" "UNIQUE" "PRIMARY KEY")
-echo "Available constraints for the column:"
+printf "\e[36mAvailable constraints for the column:\e[0m 📜\n"
 for i in "${!constraints[@]}"; do
-    printf "%d) %s\n" "$((i + 1))" "${constraints[i]}"
+    printf "\e[32m%d) %s\n\e[0m" "$((i + 1))" "${constraints[i]}"
 done
-printf "Enter your choice (1-3, or press enter to finish adding constraints)\n"
+printf "\e[34mEnter your choice (1-3, or press enter to finish adding constraints):\e[0m ⌨️\n"
 
 # Function to select a single constraint
 select_constraint() {
@@ -15,15 +15,15 @@ select_constraint() {
 
     # Handle the choice
     if [[ -z "$choice" ]]; then
-        printf "Finished selecting constraints.\n" >&2  # Signal completion, output to stderr
+        printf "\e[33mFinished selecting constraints.\e[0m ✅\n" >&2  # Signal completion, output to stderr
         return 1  # Exit status for finished
     elif [[ "$choice" =~ ^[1-3]$ ]]; then  # Validate input against available options
         local selected_constraint="${constraints[choice-1]}"
-        printf "You selected: %s\n" "$selected_constraint" >&2  # Immediate feedback, output to stderr
+        printf "\e[35mYou selected: %s\e[0m\n" "$selected_constraint" >&2  # Immediate feedback, output to stderr
         echo "$selected_constraint"  # This is the only output that gets captured
         return 0  # Continue adding constraints
     else
-        printf "Invalid selection. Please select a valid option or press enter to finish.\n" >&2
+        printf "\e[31mInvalid selection. Please select a valid option or press enter to finish.\e[0m ❌\n" >&2
         return 2  # Invalid input, output to stderr
     fi
 }
@@ -39,14 +39,14 @@ while true; do
         if [[ ! " $selected_constraints" =~ " $constraint_output " ]]; then  # Ensuring whole words match
             selected_constraints+="$constraint_output "  # Append constraint with spaces for clear separation
         else
-            printf "Constraint '%s' is already added.\n" "$constraint_output" >&2
+            printf "\e[31mConstraint '%s' is already added.\e[0m ❌\n" "$constraint_output" >&2
         fi
     else
         exit_status=$?
         if [[ $exit_status -eq 1 ]]; then  # User finished input
             break
         elif [[ $exit_status -eq 2 ]]; then  # Invalid input
-            echo "Please try again."
+            printf "\e[33mPlease try again.\e[0m 🔄\n"
         fi
     fi
 done
@@ -55,5 +55,5 @@ done
 selected_constraints=$(echo "$selected_constraints" | sed 's/^ *//;s/ *$//;s/  */ /g')
 
 # Output the final list of constraints
-echo "Selected constraints: $selected_constraints"
+printf "\e[32mSelected constraints: $selected_constraints\e[0m 🏁\n"
 
