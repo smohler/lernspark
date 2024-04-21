@@ -15,4 +15,3 @@ async fn main() {
         eprintln!("Failed to upload test data to bucker: {}", e);
     }
 }
-

@@ -1,19 +1,22 @@
 //! Data model based off data.model created by the user
 //! during initialization of lernspark
 
-use std::sync::Arc; use std::fs::File;
-use std::path::Path;
 use rand::Rng;
+use std::fs::File;
+use std::path::Path;
+use std::sync::Arc;
 
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 
-use arrow::datatypes::{Schema, Field, DataType}; // Make sure this Schema is from the correct crate
+use arrow::array::{ArrayRef, Int32Array, StringArray};
+use arrow::datatypes::{DataType, Field, Schema}; // Make sure this Schema is from the correct crate
 use arrow::record_batch::RecordBatch; // Ensure this is the RecordBatch expected by parquet
-use arrow::array::{Int32Array, StringArray, ArrayRef};
+
+use crate::sql;
 
 /// Load Schema from data.model
-fn load_data_model(){
+fn load_data_model() {
     // data.model is located in the crate root
     todo!();
 }
@@ -46,14 +49,13 @@ fn create_random_parquet_file(file_path: &str) {
     let name_array: ArrayRef = Arc::new(StringArray::from(names));
     let age_array: ArrayRef = Arc::new(Int32Array::from(ages));
 
-    let record_batch = RecordBatch::try_new(schema.clone(), vec![id_array, name_array, age_array]).unwrap();
+    let record_batch =
+        RecordBatch::try_new(schema.clone(), vec![id_array, name_array, age_array]).unwrap();
 
     // Ensure the write method receives the correct RecordBatch type
     writer.write(&record_batch).unwrap();
     writer.close().unwrap();
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -72,4 +74,3 @@ mod tests {
         fs::remove_file(file_path).unwrap();
     }
 }
-

@@ -1,18 +1,18 @@
 use aws_config::meta::region::RegionProviderChain;
+use aws_config::profile::ProfileFileCredentialsProvider;
 use aws_config::BehaviorVersion;
+use aws_config::SdkConfig;
+use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::Client as S3Client;
 use aws_types::region::Region;
 use aws_types::request_id::RequestId;
-use aws_sdk_s3::Client as S3Client;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_config::SdkConfig;
-use aws_config::profile::ProfileFileCredentialsProvider;
-use std::error::Error;
-use std::env;
-use std::time::Instant;
 use colored::*;
-use uuid::Uuid;
 use rand::Rng;
+use std::env;
+use std::error::Error;
+use std::time::Instant;
 use tokio::task;
+use uuid::Uuid;
 
 /// Checks for the AWS_PROFILE environment variable and guides the user if not set.
 pub fn check_aws_profile() -> Result<String, String> {
@@ -20,12 +20,18 @@ pub fn check_aws_profile() -> Result<String, String> {
         Ok(profile) => {
             println!("{} {}", "Using AWS profile:".green(), profile);
             Ok(profile)
-        },
+        }
         Err(_) => {
             let error_message = "The AWS_PROFILE environment variable is not set.";
             println!("{}", error_message.red());
-            println!("Please run {} to set up your AWS profile:", "aws configure --profile <profile-name>".yellow());
-            println!("After setting up, you can run this application with {}.", "AWS_PROFILE=<profile-name>".yellow());
+            println!(
+                "Please run {} to set up your AWS profile:",
+                "aws configure --profile <profile-name>".yellow()
+            );
+            println!(
+                "After setting up, you can run this application with {}.",
+                "AWS_PROFILE=<profile-name>".yellow()
+            );
             Err("Missing AWS_PROFILE environment variable.".to_string())
         }
     }
@@ -41,8 +47,7 @@ async fn create_aws_config() -> Result<SdkConfig, Box<dyn Error>> {
         .build();
 
     // Since `default_region` is now an owned String, it can safely be used here
-    let region_provider = RegionProviderChain::default_provider()
-        .or_else(Region::new("us-east-1"));  // No lifetime issues now
+    let region_provider = RegionProviderChain::default_provider().or_else(Region::new("us-east-1")); // No lifetime issues now
 
     let config = aws_config::defaults(BehaviorVersion::latest())
         .credentials_provider(credentials_provider)
@@ -56,8 +61,7 @@ async fn create_aws_config() -> Result<SdkConfig, Box<dyn Error>> {
 /// Check the permissions of the aws user
 pub async fn check_permissions() -> Result<(), String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?; 
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     let s3_client = S3Client::new(&config);
 
@@ -71,21 +75,23 @@ pub async fn check_permissions() -> Result<(), String> {
             } else {
                 Err(format!("Failed to list buckets: {}", e))
             }
-        },
+        }
     }
 }
 
 /// Check the users aws config
 pub async fn check_aws_config() -> Result<(), String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?;
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     // Create an S3 client with the final configuration
     let s3_client = S3Client::new(&config);
 
     // Attempt to list buckets as a simple connection test
-    s3_client.list_buckets().send().await
+    s3_client
+        .list_buckets()
+        .send()
+        .await
         .map_err(|err| format!("Error connecting to AWS: {}", err))?;
 
     Ok(())
@@ -94,8 +100,7 @@ pub async fn check_aws_config() -> Result<(), String> {
 /// A connection and upload test function ensuring you can upload data.
 pub async fn check_s3_deep_glacier() -> Result<bool, String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?;
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     // Create an S3 client
     let s3_client = S3Client::new(&config);
@@ -112,10 +117,11 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
         .map_err(|err| format!("Error creating test bucket: {}", err))?;
 
     // Extract relevant information from the create_bucket_resp
-    let bucket_location = create_bucket_resp.clone().location.unwrap_or_else(|| "/".to_string());
-    let request_id = create_bucket_resp
-        .request_id()
-        .unwrap_or_else(|| "Unknown");
+    let bucket_location = create_bucket_resp
+        .clone()
+        .location
+        .unwrap_or_else(|| "/".to_string());
+    let request_id = create_bucket_resp.request_id().unwrap_or_else(|| "Unknown");
 
     println!(
         "{}",
@@ -181,18 +187,16 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
 
     // Wait for all upload tasks to complete
     for upload_task in upload_tasks {
-        upload_task.await.map_err(|err| format!("Error joining upload task: {}", err))??;
+        upload_task
+            .await
+            .map_err(|err| format!("Error joining upload task: {}", err))??;
     }
 
     // Calculate the total time taken for the upload process
     let total_time = start_time.elapsed();
     println!(
         "{}",
-        format!(
-            "Total time taken for upload: {:?}",
-            total_time
-        )
-        .green()
+        format!("Total time taken for upload: {:?}", total_time).green()
     );
 
     // Clean up: Delete the test objects and bucket
@@ -312,4 +316,3 @@ mod tests {
         }
     }
 }
-

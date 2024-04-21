@@ -19,4 +19,3 @@ cleanup_on_exit() {
 
 # Initialize new SQL file
 echo "-- SQL Database Schema" > "$SQL_FILE"
-
