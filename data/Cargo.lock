@@ -746,6 +746,7 @@ dependencies = [
  "colored",
  "parquet",
  "rand 0.8.5",
+ "scopeguard",
  "tempdir",
  "tokio",
  "uuid",

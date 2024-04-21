@@ -8,6 +8,7 @@ use aws_types::region::Region;
 use aws_types::request_id::RequestId;
 use colored::*;
 use rand::Rng;
+use scopeguard::defer;
 use std::env;
 use std::error::Error;
 use std::time::Instant;
@@ -152,11 +153,13 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
 
     // Upload random byte data to the S3 bucket using parallel processes
     let mut rng = rand::thread_rng();
-    let num_uploads = rng.gen_range(5..=50);
+    let num_uploads = rng.gen_range(5..=100);
     let data_sizes: Vec<usize> = (0..num_uploads)
-        .map(|_| rng.gen_range(1..=10) * 1024 * 1024)
+        .map(|_| rng.gen_range(1..=16) * 1024 * 1024)
         .collect();
-    let mut object_keys = Vec::new();
+
+    // Declare the object_keys variable with explicit type
+    let mut object_keys: Vec<String> = Vec::new();
     let mut upload_tasks = Vec::new();
 
     // Tell me how much data we are about to upload
@@ -170,16 +173,39 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
         .yellow()
     );
 
+    // Register the cleanup action using defer!
+    defer! {
+        let s3_client = s3_client.clone();
+        let test_bucket = test_bucket.clone();
+        let object_keys: Vec<String> = Vec::new();
+        let object_keys_clone = object_keys.clone();
+        tokio::spawn(async move {
+            if let Err(e) = delete_objects_and_bucket(&s3_client, &test_bucket, &object_keys_clone).await {
+                eprintln!("{}", "Error during cleanup:".red());
+                eprintln!("{}", e.to_string().red());
+            }
+        });
+    }
+
     // Start the timer for the entire upload process
     let start_time = Instant::now();
 
-    for (_index, data_size) in data_sizes.into_iter().enumerate() {
+    for (index, data_size) in data_sizes.into_iter().enumerate() {
         let object_key = format!("random_data_{}mb.bin", data_size / (1024 * 1024));
         object_keys.push(object_key.clone());
 
         let s3_client_clone = s3_client.clone();
         let bucket_name_clone = test_bucket.clone();
         let upload_task = task::spawn(async move {
+            println!(
+                "{}",
+                format!(
+                    "Thread {} spawned for uploading {} MB of data.",
+                    index.to_string().green(),
+                    (data_size / (1024 * 1024)).to_string().cyan()
+                )
+            );
+
             upload_random_data(&s3_client_clone, &bucket_name_clone, &object_key, data_size).await
         });
         upload_tasks.push(upload_task);
@@ -187,9 +213,9 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
 
     // Wait for all upload tasks to complete
     for upload_task in upload_tasks {
-        upload_task
-            .await
-            .map_err(|err| format!("Error joining upload task: {}", err))??;
+        if let Err(err) = upload_task.await {
+            return Err(format!("Error joining upload task: {}", err));
+        }
     }
 
     // Calculate the total time taken for the upload process
