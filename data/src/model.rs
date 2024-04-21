@@ -3,6 +3,11 @@
 use colored::Colorize;
 use chrono::NaiveDate;
 use rand::Rng;
+use fake::{Fake, Faker};
+use fake::faker::name::en::Name;
+use fake::faker::internet::en::SafeEmail;
+use fake::faker::lorem::en::Word;
+use regex::Regex;
 
 use std::fs::File;
 use std::path::Path;
@@ -74,6 +79,31 @@ fn create_random_parquet_file(file_path: &str) {
     writer.close().unwrap();
 }
 
+/// Generates fake data based on the column name.
+fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
+    let mut data = Vec::with_capacity(num_rows);
+
+    // Compile regex once to avoid recompilation in the loop.
+    let name_regex = Regex::new(r"name|fullname|username").expect("Invalid regex for name");
+    let email_regex = Regex::new(r"email").expect("Invalid regex for email");
+
+    for _ in 0..num_rows {
+        if name_regex.is_match(col_name) {
+            let name: String = Name().fake();
+            data.push(name);
+        } else if email_regex.is_match(col_name) {
+            let email: String = SafeEmail().fake();
+            data.push(email);
+        } else {
+            // Generate random string for other cases
+            let random_string: String = Word().fake();
+            data.push(random_string);
+        }
+    }
+
+    data
+}
+
 /// Function to create a random Parquet data file using Arrow and Parquet APIs
 fn create_random_parquet_from_datasql(file_path: &str, table: &Table) {
     let schema = Arc::new(Schema::new(
@@ -116,11 +146,8 @@ fn create_random_parquet_from_datasql(file_path: &str, table: &Table) {
                 arrays.push(Arc::new(Float32Array::from(data)));
             }
             SqlDataType::String(_) => {
-                let mut data = Vec::with_capacity(num_rows);
-                for i in 0..num_rows {
-                    data.push(format!("{} {}", col.name, i));
-                }
-                arrays.push(Arc::new(StringArray::from(data)));
+                let fake_data = generate_fake_string_data(&col.name, num_rows);
+                arrays.push(Arc::new(StringArray::from(fake_data)));
             }
             SqlDataType::DateTime(_) => {
                 let mut data = Vec::with_capacity(num_rows);

@@ -18,6 +18,8 @@ uuid = { version = "1.8.0", features = ["v4"] }
 parquet = { version = "6.0.0", features = ["arrow"] }  # Check the version and feature compatibility.
 chrono = "0.4.38"
 scopeguard = "1.2.0"
+fake = "2.9.2"
+regex = "1.10.4"
 
 [dev-dependencies]
 tempdir = "0.3.7"
