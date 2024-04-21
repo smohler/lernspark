@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
-enum DataType {
+pub enum DataType {
     Int(u32),
     Float(f32),
     String(String),
@@ -12,19 +12,19 @@ enum DataType {
 }
 
 #[derive(Debug, PartialEq)]
-struct Column {
-    name: String,
-    data_type: DataType,
-    constraints: Vec<String>,
+pub struct Column {
+    pub name: String,
+    pub data_type: DataType,
+    pub constraints: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
-struct Table {
-    name: String,
-    columns: Vec<Column>,
+pub struct Table {
+    pub name: String,
+    pub columns: Vec<Column>,
 }
 
-fn parse_create_table(statement: &str) -> Table {
+pub fn parse_create_table(statement: &str) -> Table {
     let table_name = extract_table_name(statement);
     let columns = extract_columns(statement);
 
@@ -90,7 +90,7 @@ fn extract_columns(statement: &str) -> Vec<Column> {
 }
 
 /// Parse the data.sql into the tables
-fn parse_sql_file(sql_content: &str) -> Vec<Table> {
+pub fn parse_sql_file(sql_content: &str) -> Vec<Table> {
     let lines: Vec<&str> = sql_content.lines().collect();
     let sql_content = if lines[0].trim_start().starts_with("--") {
         lines[1..].join("\n")
