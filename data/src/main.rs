@@ -1,5 +1,6 @@
 mod aws;
 mod model;
+mod sql;
 
 #[tokio::main] // This attribute effectively makes your main function asynchronous
 async fn main() {
