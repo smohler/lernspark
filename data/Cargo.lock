@@ -742,6 +742,7 @@ dependencies = [
  "aws-sdk-s3",
  "aws-types",
  "bytes",
+ "chrono",
  "colored",
  "parquet",
  "rand 0.8.5",

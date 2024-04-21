@@ -6,7 +6,7 @@ SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 cd $SCRIPT_DIR
 
 # Setup and cleanup configurations
-source setup.sh
+source sql-setup.sh
 printf "\e[32mWriting to ${SQL_FILE}\e[0m 📝\n"
 
 # Loop for adding tables
@@ -38,8 +38,8 @@ while true; do
             break
         fi
 
-        source select-column-type.sh
-        source select-constraints.sh
+        source sql-column-type.sh
+        source sql-column-constraints.sh
 
         echo "    $column_name $column_type $selected_constraints," >> temp.txt
     done

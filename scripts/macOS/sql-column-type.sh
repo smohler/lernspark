@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Include common variables and cleanup procedures
-source setup.sh
-
 types=("INT" "VARCHAR(255)" "TEXT" "DATE" "FLOAT" "BOOLEAN")
 printf "\e[36mSelect the data type for the column:\e[0m 📊\n"
 for i in "${!types[@]}"; do

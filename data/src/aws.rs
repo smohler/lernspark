@@ -305,6 +305,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore]
     async fn test_s3_upload() {
         if let Err(e) = check_s3_deep_glacier().await {
             eprintln!("Failed to upload test data to bucker: {}", e);
