@@ -221,7 +221,7 @@ mod tests {
             assert!(Path::new(&file_path).exists());
 
             // Clean up
-            //std::fs::remove_file(&file_path).unwrap();
+            std::fs::remove_file(&file_path).unwrap();
         }
     }
 }
