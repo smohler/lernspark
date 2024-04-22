@@ -127,7 +127,8 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
     println!(
         "{}",
         format!(
-            "[AWS] Test bucket '{}' created successfully\nLocation: {}\nRequest ID: {}",
+            "{} Test bucket '{}' created successfully\nLocation: {}\nRequest ID: {}",
+            "[AWS]".green(),
             test_bucket.green(),
             bucket_location.cyan(),
             request_id.yellow()
