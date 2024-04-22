@@ -33,6 +33,10 @@ while true; do
     while true; do
         printf "\e[34mEnter column name (or leave empty to finish this table):\e[0m 📝\n"
         read column_name
+
+         # Remove whitespace characters from column_name
+        column_name=$(echo "$column_name" | tr -d '[:space:]')
+
         if [[ -z "$column_name" ]]; then
             echo "Finishing column definitions for $table_name."
             break
