@@ -1,5 +1,6 @@
 mod aws;
 mod model;
+mod sql;
 
 #[tokio::main] // This attribute effectively makes your main function asynchronous
 async fn main() {
@@ -14,4 +15,3 @@ async fn main() {
         eprintln!("Failed to upload test data to bucker: {}", e);
     }
 }
-

@@ -19,7 +19,7 @@ select_constraint() {
         return 1  # Exit status for finished
     elif [[ "$choice" =~ ^[1-3]$ ]]; then  # Validate input against available options
         local selected_constraint="${constraints[choice-1]}"
-        printf "\e[35mYou selected: %s\e[0m\n" "$selected_constraint" >&2  # Immediate feedback, output to stderr
+        printf "\e[35mYou selected: %s\e[0m\n\e[34mContinue selecting (1-3) or press enter to finish.\e[0m 💡\n" "$selected_constraint" >&2  # Immediate feedback, output to stderr
         echo "$selected_constraint"  # This is the only output that gets captured
         return 0  # Continue adding constraints
     else

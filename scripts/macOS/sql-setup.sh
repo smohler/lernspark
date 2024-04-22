@@ -4,12 +4,9 @@
 set -e
 
 # Trap specifically for Ctrl+C interruption
-trap 'echo "Caught SIGINT, running cleanup..."; cleanup_on_exit; exit 130' INT
+trap 'echo "";echo "Caught SIGINT, running cleanup..."; rm temp.txt; cleanup_on_exit; exit 130; cd $PWD' INT
 
-# Define the SQL file path relative to the script location
-SCRIPT_DIR=$(dirname "$0")
-BASE_DIR=$(realpath "$SCRIPT_DIR/../..")
-SQL_FILE="$BASE_DIR/data/data.sql"
+SQL_FILE="$ROOT_DIR/data/data.sql"
 
 # Cleanup function to handle unexpected exits
 cleanup_on_exit() {
@@ -22,4 +19,3 @@ cleanup_on_exit() {
 
 # Initialize new SQL file
 echo "-- SQL Database Schema" > "$SQL_FILE"
-

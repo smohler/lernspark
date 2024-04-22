@@ -1,18 +1,19 @@
 use aws_config::meta::region::RegionProviderChain;
+use aws_config::profile::ProfileFileCredentialsProvider;
 use aws_config::BehaviorVersion;
+use aws_config::SdkConfig;
+use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::Client as S3Client;
 use aws_types::region::Region;
 use aws_types::request_id::RequestId;
-use aws_sdk_s3::Client as S3Client;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_config::SdkConfig;
-use aws_config::profile::ProfileFileCredentialsProvider;
-use std::error::Error;
-use std::env;
-use std::time::Instant;
 use colored::*;
-use uuid::Uuid;
 use rand::Rng;
+use scopeguard::defer;
+use std::env;
+use std::error::Error;
+use std::time::Instant;
 use tokio::task;
+use uuid::Uuid;
 
 /// Checks for the AWS_PROFILE environment variable and guides the user if not set.
 pub fn check_aws_profile() -> Result<String, String> {
@@ -20,12 +21,18 @@ pub fn check_aws_profile() -> Result<String, String> {
         Ok(profile) => {
             println!("{} {}", "Using AWS profile:".green(), profile);
             Ok(profile)
-        },
+        }
         Err(_) => {
             let error_message = "The AWS_PROFILE environment variable is not set.";
             println!("{}", error_message.red());
-            println!("Please run {} to set up your AWS profile:", "aws configure --profile <profile-name>".yellow());
-            println!("After setting up, you can run this application with {}.", "AWS_PROFILE=<profile-name>".yellow());
+            println!(
+                "Please run {} to set up your AWS profile:",
+                "aws configure --profile <profile-name>".yellow()
+            );
+            println!(
+                "After setting up, you can run this application with {}.",
+                "AWS_PROFILE=<profile-name>".yellow()
+            );
             Err("Missing AWS_PROFILE environment variable.".to_string())
         }
     }
@@ -41,8 +48,7 @@ async fn create_aws_config() -> Result<SdkConfig, Box<dyn Error>> {
         .build();
 
     // Since `default_region` is now an owned String, it can safely be used here
-    let region_provider = RegionProviderChain::default_provider()
-        .or_else(Region::new("us-east-1"));  // No lifetime issues now
+    let region_provider = RegionProviderChain::default_provider().or_else(Region::new("us-east-1")); // No lifetime issues now
 
     let config = aws_config::defaults(BehaviorVersion::latest())
         .credentials_provider(credentials_provider)
@@ -56,8 +62,7 @@ async fn create_aws_config() -> Result<SdkConfig, Box<dyn Error>> {
 /// Check the permissions of the aws user
 pub async fn check_permissions() -> Result<(), String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?; 
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     let s3_client = S3Client::new(&config);
 
@@ -71,21 +76,23 @@ pub async fn check_permissions() -> Result<(), String> {
             } else {
                 Err(format!("Failed to list buckets: {}", e))
             }
-        },
+        }
     }
 }
 
 /// Check the users aws config
 pub async fn check_aws_config() -> Result<(), String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?;
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     // Create an S3 client with the final configuration
     let s3_client = S3Client::new(&config);
 
     // Attempt to list buckets as a simple connection test
-    s3_client.list_buckets().send().await
+    s3_client
+        .list_buckets()
+        .send()
+        .await
         .map_err(|err| format!("Error connecting to AWS: {}", err))?;
 
     Ok(())
@@ -94,8 +101,7 @@ pub async fn check_aws_config() -> Result<(), String> {
 /// A connection and upload test function ensuring you can upload data.
 pub async fn check_s3_deep_glacier() -> Result<bool, String> {
     // Create AWS configuration
-    let config = create_aws_config().await
-        .map_err(|e| e.to_string())?;
+    let config = create_aws_config().await.map_err(|e| e.to_string())?;
 
     // Create an S3 client
     let s3_client = S3Client::new(&config);
@@ -112,15 +118,17 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
         .map_err(|err| format!("Error creating test bucket: {}", err))?;
 
     // Extract relevant information from the create_bucket_resp
-    let bucket_location = create_bucket_resp.clone().location.unwrap_or_else(|| "/".to_string());
-    let request_id = create_bucket_resp
-        .request_id()
-        .unwrap_or_else(|| "Unknown");
+    let bucket_location = create_bucket_resp
+        .clone()
+        .location
+        .unwrap_or_else(|| "/".to_string());
+    let request_id = create_bucket_resp.request_id().unwrap_or_else(|| "Unknown");
 
     println!(
         "{}",
         format!(
-            "[AWS] Test bucket '{}' created successfully\nLocation: {}\nRequest ID: {}",
+            "{} Test bucket '{}' created successfully\nLocation: {}\nRequest ID: {}",
+            "[AWS]".green(),
             test_bucket.green(),
             bucket_location.cyan(),
             request_id.yellow()
@@ -146,11 +154,13 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
 
     // Upload random byte data to the S3 bucket using parallel processes
     let mut rng = rand::thread_rng();
-    let num_uploads = rng.gen_range(5..=50);
+    let num_uploads = rng.gen_range(5..=100);
     let data_sizes: Vec<usize> = (0..num_uploads)
-        .map(|_| rng.gen_range(1..=10) * 1024 * 1024)
+        .map(|_| rng.gen_range(1..=16) * 1024 * 1024)
         .collect();
-    let mut object_keys = Vec::new();
+
+    // Declare the object_keys variable with explicit type
+    let mut object_keys: Vec<String> = Vec::new();
     let mut upload_tasks = Vec::new();
 
     // Tell me how much data we are about to upload
@@ -164,16 +174,39 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
         .yellow()
     );
 
+    // Register the cleanup action using defer!
+    defer! {
+        let s3_client = s3_client.clone();
+        let test_bucket = test_bucket.clone();
+        let object_keys: Vec<String> = Vec::new();
+        let object_keys_clone = object_keys.clone();
+        tokio::spawn(async move {
+            if let Err(e) = delete_objects_and_bucket(&s3_client, &test_bucket, &object_keys_clone).await {
+                eprintln!("{}", "Error during cleanup:".red());
+                eprintln!("{}", e.to_string().red());
+            }
+        });
+    }
+
     // Start the timer for the entire upload process
     let start_time = Instant::now();
 
-    for (_index, data_size) in data_sizes.into_iter().enumerate() {
+    for (index, data_size) in data_sizes.into_iter().enumerate() {
         let object_key = format!("random_data_{}mb.bin", data_size / (1024 * 1024));
         object_keys.push(object_key.clone());
 
         let s3_client_clone = s3_client.clone();
         let bucket_name_clone = test_bucket.clone();
         let upload_task = task::spawn(async move {
+            println!(
+                "{}",
+                format!(
+                    "Thread {} spawned for uploading {} MB of data.",
+                    index.to_string().green(),
+                    (data_size / (1024 * 1024)).to_string().cyan()
+                )
+            );
+
             upload_random_data(&s3_client_clone, &bucket_name_clone, &object_key, data_size).await
         });
         upload_tasks.push(upload_task);
@@ -181,18 +214,16 @@ pub async fn check_s3_deep_glacier() -> Result<bool, String> {
 
     // Wait for all upload tasks to complete
     for upload_task in upload_tasks {
-        upload_task.await.map_err(|err| format!("Error joining upload task: {}", err))??;
+        if let Err(err) = upload_task.await {
+            return Err(format!("Error joining upload task: {}", err));
+        }
     }
 
     // Calculate the total time taken for the upload process
     let total_time = start_time.elapsed();
     println!(
         "{}",
-        format!(
-            "Total time taken for upload: {:?}",
-            total_time
-        )
-        .green()
+        format!("Total time taken for upload: {:?}", total_time).green()
     );
 
     // Clean up: Delete the test objects and bucket
@@ -305,10 +336,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore]
     async fn test_s3_upload() {
         if let Err(e) = check_s3_deep_glacier().await {
             eprintln!("Failed to upload test data to bucker: {}", e);
         }
     }
 }
-

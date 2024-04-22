@@ -32,8 +32,34 @@ hs_err_pid*
 *.dll
 *.exe
 
+# Compiled files
+/target/
+
+# Dependency directories
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+Cargo.toml.bkp
+Cargo.toml~
+
+# Generated documentation
+/target/doc/
+
+# Editor backup files
+*~
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
 # Generated documentation
 /doc/
 
 bin/
 data.sql
+*.parquet
