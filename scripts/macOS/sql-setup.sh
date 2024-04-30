@@ -7,6 +7,7 @@ set -e
 trap 'echo "";echo "Caught SIGINT, running cleanup..."; rm temp.txt; cleanup_on_exit; exit 130; cd $PWD' INT
 
 SQL_FILE="$ROOT_DIR/data/data.sql"
+# ln -s $SQL_FILE "$ROOT_FILE/pipeline/data.sql"
 
 # Cleanup function to handle unexpected exits
 cleanup_on_exit() {
