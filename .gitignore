@@ -63,3 +63,22 @@ Thumbs.db
 bin/
 data.sql
 *.parquet
+
+# ipynb and python
+# Ignore compiled python files
+*.pyc
+
+# Ignore virtual environment
+venv/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore python notebook files
+*.ipynb
+
+# Ignore log files
+*.log
+
+# Ignore cache files
+__pycache__/
