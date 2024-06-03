@@ -59,7 +59,7 @@ fn extract_columns(statement: &str) -> Vec<Column> {
             let data_type = match parts[1].to_uppercase().as_str() {
                 "INT" => DataType::Int(0),       // Use a default value of 0 for u32
                 "FLOAT" => DataType::Float(0.0), // Use a default value of 0.0 for f32
-                "VARCHAR(255)" | "TEXT" => DataType::String("".to_string()), // Use an empty string for String
+                "VARCHAR (255)" | "TEXT" | "VARCHAR" => DataType::String("".to_string()), // Use an empty string for String
                 "DATE" | "DATETIME" => {
                     let datetime =
                         NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")

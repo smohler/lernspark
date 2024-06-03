@@ -14,4 +14,5 @@ async fn main() {
     if let Err(e) = aws::check_s3_deep_glacier().await {
         eprintln!("Failed to upload test data to bucker: {}", e);
     }
+    // Generate a data.db file using following the data.sql schema
 }

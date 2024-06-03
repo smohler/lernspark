@@ -3,9 +3,8 @@
 use chrono::NaiveDate;
 use colored::Colorize;
 use fake::faker::{
-    address::en::*, color::en::*, company::en::*, creditcard::en::*,
-    number::en::*,
-    internet::en::*, job::en::*, lorem::en::*, name::en::*, phone_number::en::*,
+    address::en::*, color::en::*, company::en::*, creditcard::en::*, internet::en::*, job::en::*,
+    lorem::en::*, name::en::*, number::en::*, phone_number::en::*,
 };
 use fake::Fake;
 use rand::Rng;
@@ -14,6 +13,8 @@ use regex::Regex;
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
+
+use tar::Builder;
 
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
@@ -32,6 +33,42 @@ fn load_data_model() -> Vec<Table> {
     let data_sql_content =
         std::fs::read_to_string("./data.sql").expect("Unable to read data.sql file");
     sql::parse_sql_file(&data_sql_content)
+}
+
+/// Generate random Parquet files for each table and compress them into examples.tar.gz
+fn generate_sandbox_example_random_files(tables: &Vec<Table>) {
+    let tar_file_path = "examples.tar.gz";
+
+    // Create a new tar archive
+    let tar_file = File::create(tar_file_path).unwrap();
+    let mut tar_builder = Builder::new(tar_file);
+
+    // Iterate over each table and create a random Parquet file
+    for table in tables {
+        let file_path = format!("{}.parquet", table.name);
+
+        // Create a random Parquet file for the table
+        create_random_parquet_from_datasql(&file_path, table);
+
+        // Add the Parquet file to the tar archive
+        tar_builder
+            .append_file(&file_path, &mut File::open(&file_path).unwrap())
+            .unwrap();
+
+        // Remove the individual Parquet file
+        std::fs::remove_file(&file_path).unwrap();
+    }
+
+    // Finish writing the tar archive
+    tar_builder.finish().unwrap();
+
+    println!(
+        "{}",
+        format!(
+            "🎉 Fantastic example Parquet files have been generated and compressed into '{}'!",
+            tar_file_path.bold().green()
+        )
+    );
 }
 
 /// Mapping between SQL and Parquet structs
@@ -125,7 +162,10 @@ fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
                     let city: String = CityName().fake();
                     let zip_code: String = ZipCode().fake();
                     let country: String = CountryName().fake();
-                    format!("{} {}, {}, {}, {}, {}", address, street_address, secondary_address, city, zip_code, country)
+                    format!(
+                        "{} {}, {}, {}, {}, {}",
+                        address, street_address, secondary_address, city, zip_code, country
+                    )
                 }
             };
             data.push(address);
@@ -349,5 +389,18 @@ mod tests {
             // Clean up
             std::fs::remove_file(&file_path).unwrap();
         }
+    }
+
+    #[test]
+    fn test_creating_random_parquet_files_and_tar_from_datasql() {
+        let tables = load_data_model();
+        generate_sandbox_example_random_files(&tables);
+
+        // Check if the tar file was created
+        let tar_file_path = "examples.tar.gz";
+        assert!(Path::new(tar_file_path).exists());
+
+        // Clean up
+        std::fs::remove_file(tar_file_path).unwrap();
     }
 }
