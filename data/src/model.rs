@@ -29,18 +29,26 @@ use arrow::record_batch::RecordBatch; // Ensure this is the RecordBatch expected
 use crate::sql::{self, DataType as SqlDataType, Table};
 
 /// Load Schema from data.sql
-fn load_data_model() -> Vec<Table> {
-    let data_sql_content =
-        std::fs::read_to_string("./data.sql").expect("Unable to read data.sql file");
+pub fn load_data_model() -> Vec<Table> {
+    // Get the crate root directory
+    let crate_root = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+
+    // Define the path to data.sql starting from root
+    let data_sql_path = Path::new(&crate_root).join("data.sql");
+    let data_sql_content = std::fs::read_to_string(&data_sql_path).expect("Unable to read data.sql file");
     sql::parse_sql_file(&data_sql_content)
 }
 
 /// Generate random Parquet files for each table and compress them into examples.tar.gz
-fn generate_sandbox_example_random_files(tables: &Vec<Table>) {
-    let tar_file_path = "examples.tar.gz";
+pub fn generate_sandbox_example_random_files(tables: &Vec<Table>) {
+    // get the local downloads directory
+    let downloads_dir = dirs::download_dir().unwrap();
+
+    // Create a new tar archive in downloads directory
+    let tar_file_path = downloads_dir.join("examples.tar.gz");
 
     // Create a new tar archive
-    let tar_file = File::create(tar_file_path).unwrap();
+    let tar_file = File::create(&tar_file_path).unwrap();
     let mut tar_builder = Builder::new(tar_file);
 
     // Iterate over each table and create a random Parquet file
@@ -62,11 +70,14 @@ fn generate_sandbox_example_random_files(tables: &Vec<Table>) {
     // Finish writing the tar archive
     tar_builder.finish().unwrap();
 
+    // Create a string rep of the tar file path
+    let tar_file_path_str = tar_file_path.to_str().unwrap();
+
     println!(
         "{}",
         format!(
             "🎉 Fantastic example Parquet files have been generated and compressed into '{}'!",
-            tar_file_path.bold().green()
+            &tar_file_path_str.bold().green()
         )
     );
 }

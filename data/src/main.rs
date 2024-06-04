@@ -11,8 +11,12 @@ async fn main() {
     if let Err(e) = aws::check_aws_config().await {
         eprintln!("Failed to check AWS config: {}", e);
     }
-    if let Err(e) = aws::check_s3_deep_glacier().await {
-        eprintln!("Failed to upload test data to bucker: {}", e);
-    }
-    // Generate a data.db file using following the data.sql schema
+    //if let Err(e) = aws::check_s3_deep_glacier().await {
+    //    eprintln!("Failed to upload test data to bucket: {}", e);
+    //}
+    // Create examples.tar.gz for sandbox exploration
+    let tables = model::load_data_model();
+    model::generate_sandbox_example_random_files(&tables);
+
+   
 }
