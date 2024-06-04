@@ -21,6 +21,7 @@ scopeguard = "1.2.0"
 fake = { version = "2.9.2", features = ["random_color", "time"] }
 regex = "1.10.4"
 tar = "0.4.40"
+dirs = "5.0.1"
 
 [dev-dependencies]
 tempdir = "0.3.7"
