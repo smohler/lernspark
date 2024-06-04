@@ -9,7 +9,14 @@ cargo run
 
 cd $DIR/../../pipeline
 
-# Open the jupyter notebook
+# Start a python virtual env for python3.11
+python -m venv lernspark
+source lernspark/bin/activate
+
+# Open the notebook sandbox.ipynb in Jupyter and after it is closed, deactivate the virtual env
 jupyter notebook sandbox.ipynb
+
+# Deactivate the virtual env
+deactivate
 
 cd $DIR
