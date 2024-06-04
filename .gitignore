@@ -85,3 +85,8 @@ __pycache__/
 
 # Juptyer notebook checkpoints
 .ipynb_checkpoints/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+.nbconvert/
