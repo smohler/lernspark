@@ -17,6 +17,4 @@ async fn main() {
     // Create examples.tar.gz for sandbox exploration
     let tables = model::load_data_model();
     model::generate_sandbox_example_random_files(&tables);
-
-   
 }

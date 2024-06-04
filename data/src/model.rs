@@ -16,6 +16,9 @@ use std::sync::Arc;
 
 use tar::Builder;
 
+use flate2::write::GzEncoder;
+use flate2::Compression;
+
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 use parquet::file::reader::FileReader;
@@ -39,45 +42,44 @@ pub fn load_data_model() -> Vec<Table> {
     sql::parse_sql_file(&data_sql_content)
 }
 
-/// Generate random Parquet files for each table and compress them into examples.tar.gz
 pub fn generate_sandbox_example_random_files(tables: &Vec<Table>) {
-    // get the local downloads directory
+    // Get the local downloads directory
     let downloads_dir = dirs::download_dir().unwrap();
+    // Create a new tar.gz archive in downloads directory
+    let tar_gz_file_path = downloads_dir.join("examples.tar.gz");
+    // Create a new file for the tar.gz archive
+    let tar_gz_file = File::create(&tar_gz_file_path).unwrap();
+    // Create a new GzEncoder with the tar.gz file
+    let mut gz_encoder = GzEncoder::new(tar_gz_file, Compression::default());
 
-    // Create a new tar archive in downloads directory
-    let tar_file_path = downloads_dir.join("examples.tar.gz");
+    {
+        // Create a new tar archive
+        let mut tar_builder = Builder::new(&mut gz_encoder);
+        // Iterate over each table and create a random Parquet file
+        for table in tables {
+            let file_path = format!("{}.parquet", table.name);
+            // Create a random Parquet file for the table
+            create_random_parquet_from_datasql(&file_path, table);
+            // Add the Parquet file to the tar archive
+            tar_builder
+                .append_file(&file_path, &mut File::open(&file_path).unwrap())
+                .unwrap();
+            // Remove the individual Parquet file
+            std::fs::remove_file(&file_path).unwrap();
+        }
+        // Finish writing the tar archive
+        tar_builder.finish().unwrap();
+    } // The tar_builder is dropped here, ending the mutable borrow
 
-    // Create a new tar archive
-    let tar_file = File::create(&tar_file_path).unwrap();
-    let mut tar_builder = Builder::new(tar_file);
-
-    // Iterate over each table and create a random Parquet file
-    for table in tables {
-        let file_path = format!("{}.parquet", table.name);
-
-        // Create a random Parquet file for the table
-        create_random_parquet_from_datasql(&file_path, table);
-
-        // Add the Parquet file to the tar archive
-        tar_builder
-            .append_file(&file_path, &mut File::open(&file_path).unwrap())
-            .unwrap();
-
-        // Remove the individual Parquet file
-        std::fs::remove_file(&file_path).unwrap();
-    }
-
-    // Finish writing the tar archive
-    tar_builder.finish().unwrap();
-
-    // Create a string rep of the tar file path
-    let tar_file_path_str = tar_file_path.to_str().unwrap();
-
+    // Finish writing the GzEncoder
+    gz_encoder.try_finish().unwrap();
+    // Create a string representation of the tar.gz file path
+    let tar_gz_file_path_str = tar_gz_file_path.to_str().unwrap();
     println!(
         "{}",
         format!(
             "🎉 Fantastic example Parquet files have been generated and compressed into '{}'!",
-            &tar_file_path_str.bold().green()
+            &tar_gz_file_path_str.bold().green()
         )
     );
 }
@@ -407,9 +409,11 @@ mod tests {
         let tables = load_data_model();
         generate_sandbox_example_random_files(&tables);
 
-        // Check if the tar file was created
-        let tar_file_path = "examples.tar.gz";
-        assert!(Path::new(tar_file_path).exists());
+        // Check that example.tar.gz exists in the user downloads directory
+        // Get the local downloads directory
+        let downloads_dir = dirs::download_dir().unwrap();
+        let tar_file_path = downloads_dir.join("examples.tar.gz");
+        assert!(Path::new(&tar_file_path).exists());
 
         // Clean up
         std::fs::remove_file(tar_file_path).unwrap();
