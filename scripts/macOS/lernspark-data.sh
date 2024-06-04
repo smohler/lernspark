@@ -18,7 +18,7 @@ while true; do
         break
     fi
 
-    printf "\e[35mEnter table name:\e[0m 📛\n"
+    printf "\e[35mEnter table name:\e[0m 📑\n"
     read table_name
     if [[ -z "$table_name" ]]; then
         printf "\e[31mTable name cannot be empty.\e[0m ❌\n"
