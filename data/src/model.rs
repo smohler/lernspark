@@ -38,7 +38,8 @@ pub fn load_data_model() -> Vec<Table> {
 
     // Define the path to data.sql starting from root
     let data_sql_path = Path::new(&crate_root).join("data.sql");
-    let data_sql_content = std::fs::read_to_string(&data_sql_path).expect("Unable to read data.sql file");
+    let data_sql_content =
+        std::fs::read_to_string(&data_sql_path).expect("Unable to read data.sql file");
     sql::parse_sql_file(&data_sql_content)
 }
 
@@ -134,7 +135,11 @@ fn create_random_parquet_file(file_path: &str) {
 }
 
 /// Generates fake data based on the column name.
-fn generate_fake_string_data(col_name: &str, num_rows: usize, max_length: Option<usize>) -> Vec<String> {
+fn generate_fake_string_data(
+    col_name: &str,
+    num_rows: usize,
+    max_length: Option<usize>,
+) -> Vec<String> {
     let mut data = Vec::with_capacity(num_rows);
 
     // Compile regex once to avoid recompilation in the loop.

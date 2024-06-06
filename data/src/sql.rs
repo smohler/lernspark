@@ -29,7 +29,11 @@ pub struct Table {
 /// Parse the data.sql into the tables
 pub fn parse_sql_file(sql_content: &str) -> Vec<Table> {
     let lines: Vec<&str> = sql_content.lines().collect();
-    let sql_content = if lines.get(0).map(|line| line.trim_start().starts_with("--")).unwrap_or(false) {
+    let sql_content = if lines
+        .get(0)
+        .map(|line| line.trim_start().starts_with("--"))
+        .unwrap_or(false)
+    {
         lines[1..].join("\n")
     } else {
         sql_content.to_string()
@@ -106,7 +110,9 @@ fn parse_column(col_def: &str) -> Column {
 }
 
 fn parse_data_type_and_constraints(input: &str) -> Option<(DataType, Vec<String>)> {
-    let re = Regex::new(r"(?i)^(VARCHAR\((\d+)\)|INT|FLOAT|TEXT|DATE|DATETIME|UUID|BOOLEAN)\s*(.*)$").unwrap();
+    let re =
+        Regex::new(r"(?i)^(VARCHAR\((\d+)\)|INT|FLOAT|TEXT|DATE|DATETIME|UUID|BOOLEAN)\s*(.*)$")
+            .unwrap();
 
     re.captures(input).map(|cap| {
         let data_type = match &cap[1].to_uppercase()[..] {
@@ -114,23 +120,28 @@ fn parse_data_type_and_constraints(input: &str) -> Option<(DataType, Vec<String>
             "FLOAT" => DataType::Float(0.0),
             "TEXT" => DataType::String(String::new()),
             "DATE" | "DATETIME" => DataType::DateTime(
-                NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap()
+                NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
             ),
-            "UUID" => DataType::UUID(Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap()),
+            "UUID" => {
+                DataType::UUID(Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap())
+            }
             "BOOLEAN" => DataType::Boolean(false),
             varchar if varchar.starts_with("VARCHAR") => {
                 let len = cap[2].parse::<usize>().unwrap_or(255);
                 DataType::VarChar(len)
-            },
+            }
             _ => panic!("Unsupported data type: {}", &cap[1]),
         };
 
-        let constraints = cap[3].split_whitespace().map(|c| c.to_string()).collect();
+        let constraints: Vec<String> = cap[3]
+            .split_whitespace()
+            .filter(|c| !c.eq_ignore_ascii_case("TIME")) // Filter out unwanted "TIME" constraint
+            .map(|c| c.to_string())
+            .collect();
 
         (data_type, constraints)
     })
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -162,7 +173,8 @@ mod tests {
                 Column {
                     name: "Bar".to_string(),
                     data_type: DataType::DateTime(
-                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                            .unwrap(),
                     ),
                     constraints: vec!["UNIQUE".to_string(), "NOT".to_string(), "NULL".to_string()],
                 },
@@ -181,7 +193,8 @@ mod tests {
                 Column {
                     name: "Qux".to_string(),
                     data_type: DataType::DateTime(
-                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                            .unwrap(),
                     ),
                     constraints: vec![],
                 },
@@ -280,4 +293,3 @@ mod tests {
         assert_eq!(parsed_tables, expected_tables);
     }
 }
-
