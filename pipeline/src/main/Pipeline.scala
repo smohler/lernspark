@@ -4,7 +4,7 @@ import org.apache.spark.sql.SparkSession
 object Pipeline {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
-      .appName("MyDataPipeline")
+      .appName("lernspark")
       .getOrCreate()
 
     val inputPath = sys.env.getOrElse("INPUT_PATH", "s3://default-input-bucket/path/to/parquet/files")
