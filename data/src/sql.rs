@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use regex::Regex;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
@@ -9,6 +10,7 @@ pub enum DataType {
     DateTime(NaiveDateTime),
     UUID(Uuid),
     Boolean(bool),
+    VarChar(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -22,6 +24,27 @@ pub struct Column {
 pub struct Table {
     pub name: String,
     pub columns: Vec<Column>,
+}
+
+/// Parse the data.sql into the tables
+pub fn parse_sql_file(sql_content: &str) -> Vec<Table> {
+    let lines: Vec<&str> = sql_content.lines().collect();
+    let sql_content = if lines.get(0).map(|line| line.trim_start().starts_with("--")).unwrap_or(false) {
+        lines[1..].join("\n")
+    } else {
+        sql_content.to_string()
+    };
+
+    let statements: Vec<&str> = sql_content
+        .split(';')
+        .map(|stmt| stmt.trim())
+        .filter(|stmt| !stmt.is_empty())
+        .collect();
+
+    statements
+        .into_iter()
+        .map(|stmt| parse_create_table(stmt))
+        .collect()
 }
 
 pub fn parse_create_table(statement: &str) -> Table {
@@ -44,71 +67,70 @@ fn extract_table_name(statement: &str) -> String {
 }
 
 fn extract_columns(statement: &str) -> Vec<Column> {
-    statement
-        .split('(')
-        .nth(1)
-        .unwrap_or("")
-        .trim_end_matches(')')
-        .trim_end_matches(';')
-        .split(',')
-        .map(|col| col.trim())
-        .filter(|col| !col.is_empty())
-        .map(|col| {
-            let parts: Vec<&str> = col.split_whitespace().collect();
-            let name = parts[0].to_string();
-            let data_type = match parts[1].to_uppercase().as_str() {
-                "INT" => DataType::Int(0),       // Use a default value of 0 for u32
-                "FLOAT" => DataType::Float(0.0), // Use a default value of 0.0 for f32
-                "VARCHAR (255)" | "TEXT" | "VARCHAR" => DataType::String("".to_string()), // Use an empty string for String
-                "DATE" | "DATETIME" => {
-                    let datetime =
-                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-                            .unwrap();
-                    DataType::DateTime(datetime)
-                }
-                "UUID" => {
-                    let uuid = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
-                    DataType::UUID(uuid)
-                }
-                "BOOLEAN" => DataType::Boolean(false), // Use a default value of false for bool
-                // Add more data type mappings as needed
-                _ => panic!("Unsupported data type: {}", parts[1]),
-            };
-            let constraints = parts[2..]
-                .iter()
-                .flat_map(|c| c.split_whitespace())
-                .map(|c| c.trim_end_matches(')').trim_end_matches(';').to_string())
-                .filter(|c| !c.is_empty())
-                .collect();
-            Column {
-                name,
-                data_type,
-                constraints,
+    let column_definitions = statement
+        .split_once('(')
+        .and_then(|(_, cols)| cols.rsplit_once(')').map(|(cols, _)| cols))
+        .unwrap_or("");
+
+    let re = Regex::new(r"(?m)\s*([^,]+(?:\([^)]*\))?[^,]*)(?:,|$)").unwrap();
+    re.captures_iter(column_definitions)
+        .filter_map(|cap| {
+            let col_def = cap.get(1).unwrap().as_str().trim();
+            if col_def.is_empty() {
+                None
+            } else {
+                Some(parse_column(col_def))
             }
         })
         .collect()
 }
 
-/// Parse the data.sql into the tables
-pub fn parse_sql_file(sql_content: &str) -> Vec<Table> {
-    let lines: Vec<&str> = sql_content.lines().collect();
-    let sql_content = if lines[0].trim_start().starts_with("--") {
-        lines[1..].join("\n")
-    } else {
-        sql_content.to_string()
-    };
+fn parse_column(col_def: &str) -> Column {
+    let parts: Vec<&str> = col_def.split_whitespace().collect();
+    let name = parts[0].to_string();
+    let data_type_str = parts[1..].join(" ");
 
-    let statements: Vec<&str> = sql_content
-        .split(";")
-        .map(|stmt| stmt.trim())
-        .filter(|stmt| !stmt.is_empty())
-        .collect();
+    let mut data_type = DataType::String(String::new());
+    let mut constraints = vec![];
 
-    statements
-        .into_iter()
-        .map(|stmt| parse_create_table(stmt))
-        .collect()
+    if let Some((dt, cn)) = parse_data_type_and_constraints(&data_type_str) {
+        data_type = dt;
+        constraints = cn;
+    }
+
+    Column {
+        name,
+        data_type,
+        constraints,
+    }
 }
+
+fn parse_data_type_and_constraints(input: &str) -> Option<(DataType, Vec<String>)> {
+    let re = Regex::new(r"(?i)^(VARCHAR\((\d+)\)|INT|FLOAT|TEXT|DATE|DATETIME|UUID|BOOLEAN)\s*(.*)$").unwrap();
+
+    re.captures(input).map(|cap| {
+        let data_type = match &cap[1].to_uppercase()[..] {
+            "INT" => DataType::Int(0),
+            "FLOAT" => DataType::Float(0.0),
+            "TEXT" => DataType::String(String::new()),
+            "DATE" | "DATETIME" => DataType::DateTime(
+                NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap()
+            ),
+            "UUID" => DataType::UUID(Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap()),
+            "BOOLEAN" => DataType::Boolean(false),
+            varchar if varchar.starts_with("VARCHAR") => {
+                let len = cap[2].parse::<usize>().unwrap_or(255);
+                DataType::VarChar(len)
+            },
+            _ => panic!("Unsupported data type: {}", &cap[1]),
+        };
+
+        let constraints = cap[3].split_whitespace().map(|c| c.to_string()).collect();
+
+        (data_type, constraints)
+    })
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -121,7 +143,8 @@ mod tests {
         Bar DATE UNIQUE NOT NULL,
         Jar FLOAT,
         Baz UUID,
-        Qux DATETIME
+        Qux DATETIME,
+        Name VARCHAR(255)
     );";
 
         let expected_table = Table {
@@ -139,8 +162,7 @@ mod tests {
                 Column {
                     name: "Bar".to_string(),
                     data_type: DataType::DateTime(
-                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-                            .unwrap(),
+                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
                     ),
                     constraints: vec!["UNIQUE".to_string(), "NOT".to_string(), "NULL".to_string()],
                 },
@@ -159,9 +181,13 @@ mod tests {
                 Column {
                     name: "Qux".to_string(),
                     data_type: DataType::DateTime(
-                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-                            .unwrap(),
+                        NaiveDateTime::parse_from_str("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
                     ),
+                    constraints: vec![],
+                },
+                Column {
+                    name: "Name".to_string(),
+                    data_type: DataType::VarChar(255),
                     constraints: vec![],
                 },
             ],
@@ -177,7 +203,8 @@ mod tests {
     CREATE TABLE Lanisters (
         ID INT AUTO_INCREMENT PRIMARY KEY,
         King TEXT UNIQUE,
-        Army INT NOT NULL
+        Army INT NOT NULL,
+        Alias VARCHAR(100)
     );
 
     CREATE TABLE Starks (
@@ -210,6 +237,11 @@ mod tests {
                         name: "Army".to_string(),
                         data_type: DataType::Int(0),
                         constraints: vec!["NOT".to_string(), "NULL".to_string()],
+                    },
+                    Column {
+                        name: "Alias".to_string(),
+                        data_type: DataType::VarChar(100),
+                        constraints: vec![],
                     },
                 ],
             },
@@ -248,3 +280,4 @@ mod tests {
         assert_eq!(parsed_tables, expected_tables);
     }
 }
+

@@ -93,6 +93,7 @@ fn map_sql_to_arrow_type(sql_type: &SqlDataType) -> DataType {
         SqlDataType::DateTime(_) => DataType::Date32,
         SqlDataType::UUID(_) => DataType::Utf8,
         SqlDataType::Boolean(_) => DataType::Boolean,
+        SqlDataType::VarChar(_) => DataType::Utf8,
     }
 }
 
@@ -133,7 +134,7 @@ fn create_random_parquet_file(file_path: &str) {
 }
 
 /// Generates fake data based on the column name.
-fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
+fn generate_fake_string_data(col_name: &str, num_rows: usize, max_length: Option<usize>) -> Vec<String> {
     let mut data = Vec::with_capacity(num_rows);
 
     // Compile regex once to avoid recompilation in the loop.
@@ -154,14 +155,12 @@ fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
         .expect("Invalid regex for lorem");
 
     for _ in 0..num_rows {
-        if name_regex.is_match(col_name) {
-            let name: String = Name().fake();
-            data.push(name);
+        let mut fake_string = if name_regex.is_match(col_name) {
+            Name().fake()
         } else if email_regex.is_match(col_name) {
-            let email: String = SafeEmail().fake();
-            data.push(email);
+            SafeEmail().fake()
         } else if address_regex.is_match(col_name) {
-            let address: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("street") => StreetName().fake(),
                 _ if col_name.to_lowercase().as_str().contains("city") => CityName().fake(),
                 _ if col_name.to_lowercase().as_str().contains("state") => StateName().fake(),
@@ -180,54 +179,46 @@ fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
                         address, street_address, secondary_address, city, zip_code, country
                     )
                 }
-            };
-            data.push(address);
+            }
         } else if company_regex.is_match(col_name) {
-            let company: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("company") => CompanyName().fake(),
-                _ if col_name.to_lowercase().as_str().contains("buisness") => CompanyName().fake(),
+                _ if col_name.to_lowercase().as_str().contains("business") => CompanyName().fake(),
                 _ if col_name.to_lowercase().as_str().contains("industry") => Industry().fake(),
                 _ if col_name.to_lowercase().as_str().contains("buzzword") => Buzzword().fake(),
                 _ => CompanySuffix().fake(),
-            };
-            data.push(company);
+            }
         } else if internet_regex.is_match(col_name) {
-            let internet: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("domain") => DomainSuffix().fake(),
                 _ if col_name.to_lowercase().as_str().contains("ip") => IPv4().fake(),
                 _ if col_name.to_lowercase().as_str().contains("mac") => MACAddress().fake(),
                 _ => Username().fake(),
-            };
-            data.push(internet);
+            }
         } else if payment_regex.is_match(col_name) {
-            let payment: String = CreditCardNumber().fake();
-            data.push(payment);
+            CreditCardNumber().fake()
         } else if phone_regex.is_match(col_name) {
-            let phone: String = PhoneNumber().fake();
-            data.push(phone);
+            PhoneNumber().fake()
         } else if color_regex.is_match(col_name) {
-            let color: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("rgb") => RgbColor().fake(),
                 _ if col_name.to_lowercase().as_str().contains("hex") => HexColor().fake(),
                 _ => Color().fake(),
-            };
-            data.push(color);
+            }
         } else if time_regex.is_match(col_name) {
-            let time: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("zone") => TimeZone().fake(),
                 _ => Word().fake(), // Fallback to random string
-            };
-            data.push(time);
+            }
         } else if job_regex.is_match(col_name) {
-            let job: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("field") => Field().fake(),
                 _ if col_name.to_lowercase().as_str().contains("position") => Position().fake(),
                 _ if col_name.to_lowercase().as_str().contains("seniority") => Seniority().fake(),
                 _ => Word().fake(), // Fallback to random string
-            };
-            data.push(job);
+            }
         } else if lorem_regex.is_match(col_name) {
-            let lorem: String = match col_name.to_lowercase().as_str() {
+            match col_name.to_lowercase().as_str() {
                 _ if col_name.to_lowercase().as_str().contains("paragraph")
                     || col_name.to_lowercase().as_str().contains("review")
                     || col_name.to_lowercase().as_str().contains("post") =>
@@ -242,13 +233,19 @@ fn generate_fake_string_data(col_name: &str, num_rows: usize) -> Vec<String> {
                 }
                 _ if col_name.to_lowercase().as_str().contains("word") => Word().fake(),
                 _ => Word().fake(),
-            };
-            data.push(lorem);
+            }
         } else {
             // Generate random string for other cases
-            let random_string: String = Word().fake();
-            data.push(random_string);
+            Word().fake()
+        };
+
+        if let Some(max_len) = max_length {
+            if fake_string.len() > max_len {
+                fake_string.truncate(max_len);
+            }
         }
+
+        data.push(fake_string);
     }
 
     data
@@ -296,7 +293,11 @@ fn create_random_parquet_from_datasql(file_path: &str, table: &Table) {
                 arrays.push(Arc::new(Float32Array::from(data)));
             }
             SqlDataType::String(_) => {
-                let fake_data = generate_fake_string_data(&col.name, num_rows);
+                let fake_data = generate_fake_string_data(&col.name, num_rows, None);
+                arrays.push(Arc::new(StringArray::from(fake_data)));
+            }
+            SqlDataType::VarChar(size) => {
+                let fake_data = generate_fake_string_data(&col.name, num_rows, Some(*size));
                 arrays.push(Arc::new(StringArray::from(fake_data)));
             }
             SqlDataType::DateTime(_) => {
